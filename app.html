@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reel Math - app</title>
+<link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
+<style>
+  :root { --accent: #1a4a4a; }
+  h1 { color: var(--accent); margin-bottom: 0.2em; }
+  .tag { color: var(--accent); font-style: italic; }
+  .card { border: 1px solid #ddd; border-left: 4px solid var(--accent); padding: 1em 1.2em; margin: 1.2em 0; border-radius: 4px; }
+  .big { font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-top: 0.8em; }
+  .err { color: #b00; font-weight: 700; }
+  label { display: block; margin-top: 0.6em; font-size: 0.9em; }
+  input, select { max-width: 12em; }
+  .foot { margin-top: 2.5em; font-size: 0.85em; color: #777; }
+</style>
+</head>
+<body>
+<h1>Reel Math</h1>
+<p class="tag">Spool truth, casting window and the lead budget - labeled norms, honest arithmetic.</p>
+
+<div class="card">
+  <h3>The spool truth</h3>
+  <label for="s-yd">Sticker yardage (yd)</label>
+  <input id="s-yd" type="number" step="any" value="200">
+  <label for="s-lb">Sticker line test (lb, mono)</label>
+  <select id="s-lb">
+    <option value="6">6</option><option value="8">8</option>
+    <option value="10" selected>10</option><option value="12">12</option>
+    <option value="14">14</option><option value="17">17</option><option value="20">20</option>
+  </select>
+  <label for="s-type">Your line</label>
+  <select id="s-type">
+    <option value="mono">mono</option>
+    <option value="braid" selected>braid</option>
+    <option value="fluoro">fluoro</option>
+  </select>
+  <label for="s-test">Your line test (lb)</label>
+  <select id="s-test"></select>
+  <p class="big" id="s-out"></p>
+</div>
+
+<div class="card">
+  <h3>The casting window</h3>
+  <label for="w-lure">Lure weight (oz)</label>
+  <input id="w-lure" type="number" step="any" value="0.5">
+  <label for="w-min">Rod window low (oz)</label>
+  <input id="w-min" type="number" step="any" value="0.375">
+  <label for="w-max">Rod window high (oz)</label>
+  <input id="w-max" type="number" step="any" value="0.75">
+  <p class="big" id="w-out"></p>
+</div>
+
+<div class="card">
+  <h3>The lead budget</h3>
+  <label for="k-depth">Depth (ft)</label>
+  <input id="k-depth" type="number" step="any" value="12">
+  <label for="k-current">Current (mph)</label>
+  <input id="k-current" type="number" step="any" value="1.5">
+  <p class="big" id="k-out"></p>
+</div>
+
+<p class="foot">Diameters and sinker rates are labeled norms - the sticker line was mono, and the quarter-ounce drawer belongs to a lake at dawn.</p>
+
+<script src="engine.js"></script>
+<script>
+function g(id){ return document.getElementById(id); }
+function v(id){ var n = parseFloat(g(id).value); return isNaN(n) ? NaN : n; }
+function show(id, s, bad){ var el = g(id); el.textContent = s; el.className = bad ? "err big" : "big"; }
+
+var TESTS = {
+  mono: ["6","8","10","12","14","17","20"],
+  braid: ["8","10","15","20","30","40","50"],
+  fluoro: ["8","10","12","15","20"]
+};
+function fillTests(){
+  var t = g("s-type").value, sel = g("s-test");
+  var keep = sel.value;
+  sel.innerHTML = "";
+  TESTS[t].forEach(function(x){
+    var o = document.createElement("option");
+    o.value = x; o.textContent = x; sel.appendChild(o);
+  });
+  if (TESTS[t].indexOf(keep) >= 0) sel.value = keep; else sel.value = TESTS[t][0];
+}
+function runCapacity(){
+  var args = [v("s-yd"), g("s-lb").value, g("s-type").value, g("s-test").value];
+  var r = ReelMath.capacityPlan.apply(null, args);
+  if (r.error) return show("s-out", r.error, true);
+  show("s-out", ReelMath.renderCapacity.apply(null, [r].concat(args)), false);
+}
+function runWindow(){
+  var args = [v("w-lure"), v("w-min"), v("w-max")];
+  var r = ReelMath.windowPlan.apply(null, args);
+  if (r.error) return show("w-out", r.error, true);
+  show("w-out", ReelMath.renderWindow.apply(null, [r].concat(args)), false);
+}
+function runSinker(){
+  var args = [v("k-depth"), v("k-current")];
+  var r = ReelMath.sinkerPlan.apply(null, args);
+  if (r.error) return show("k-out", r.error, true);
+  show("k-out", ReelMath.renderSinker.apply(null, [r].concat(args)), false);
+}
+g("s-type").addEventListener("change", function(){ fillTests(); runCapacity(); });
+["s-yd","s-lb","s-test"].forEach(function(id){ g(id).addEventListener("input", runCapacity); g(id).addEventListener("change", runCapacity); });
+["w-lure","w-min","w-max"].forEach(function(id){ g(id).addEventListener("input", runWindow); g(id).addEventListener("change", runWindow); });
+["k-depth","k-current"].forEach(function(id){ g(id).addEventListener("input", runSinker); g(id).addEventListener("change", runSinker); });
+fillTests(); g("s-test").value = "20";
+runCapacity(); runWindow(); runSinker();
+</script>
+</body>
+</html>
